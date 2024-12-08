@@ -3,9 +3,13 @@ package ru.clevertec.entity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedAttributeNode;
+import jakarta.persistence.NamedEntityGraph;
+import jakarta.persistence.NamedSubgraph;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Builder;
@@ -23,6 +27,20 @@ import java.util.List;
 @SuperBuilder
 @Entity
 @Table(name = "car_showrooms")
+@NamedEntityGraph(
+        name = "car_showroom_entity_graph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "cars", subgraph = "cars_subgraph")
+        },
+        subgraphs = {
+                @NamedSubgraph(
+                        name = "cars_subgraph",
+                        attributeNodes = {
+                                @NamedAttributeNode("reviews")
+                        }
+                )
+        }
+)
 public class CarShowroom {
 
     @Id
@@ -35,7 +53,7 @@ public class CarShowroom {
     private String address;
 
     @Builder.Default
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "carShowroom")
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "carShowroom", fetch = FetchType.EAGER)
     private List<Car> cars = new ArrayList<>();
 
     public void addCar(Car car) {

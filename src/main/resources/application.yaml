@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/demo
+    user-name: postgres
+    password: postgres
+
+  entity-manager-factory:
+    packages-to-scan: ru.clevertec.entity
+    hibernate-hbm2ddl-auto: create
+    dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    format-sql: true
+    hibernate-hbm2ddl-import_files: init.sql
+
+  liquibase:
+    changelogFile: classpath:master.xml

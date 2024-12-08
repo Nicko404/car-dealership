@@ -1,38 +1,62 @@
 package ru.clevertec.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.clevertec.dto.CategoryDto;
+import ru.clevertec.dto.upsert.UpsertCategoryDto;
 import ru.clevertec.entity.Category;
-import ru.clevertec.repository.Repository;
+import ru.clevertec.exception.EntityNotFoundException;
+import ru.clevertec.mapper.CategoryMapper;
+import ru.clevertec.repository.CategoryRepository;
+import ru.clevertec.utils.ObjectsUtils;
 
+import java.text.MessageFormat;
 import java.util.List;
 
+@Service
 @RequiredArgsConstructor
-public class CategoryService implements Service<Category> {
+public class CategoryService {
 
-    private final Repository<Category> repository;
+    private final CategoryRepository categoryRepository;
 
-    @Override
-    public List<Category> getAll() {
-        return repository.findAll();
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getAll() {
+        return CategoryMapper.INSTANCE.categoriesToCategoryDtos(categoryRepository.findAll());
     }
 
-    @Override
-    public Category getById(Long id) {
-        return repository.findById(id);
+    public CategoryDto getById(Long id) {
+        return CategoryMapper.INSTANCE.categoryToCategoryDto(categoryRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException(MessageFormat.format("Category with id {0} not found", id))
+                )
+        );
     }
 
-    @Override
-    public Category save(Category category) {
-        return repository.save(category);
+    public CategoryDto create(UpsertCategoryDto categoryDto) {
+        Category save = categoryRepository.save(CategoryMapper.INSTANCE.upsertCategoryDtoToCategory(categoryDto));
+        return CategoryMapper.INSTANCE.categoryToCategoryDto(save);
     }
 
-    @Override
-    public Category update(Long id, Category category) {
-        return repository.update(id, category);
+    public CategoryDto update(Long id, UpsertCategoryDto categoryDto) {
+        Category updated = CategoryMapper.INSTANCE.upsertCategoryDtoToCategory(categoryDto);
+        updated.setCars(null);
+        Category saved = categoryRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException(MessageFormat.format("Category with id {0} not found", id))
+        );
+
+        ObjectsUtils.copyNotNullProperties(updated, saved);
+
+        categoryRepository.save(saved);
+
+        return CategoryMapper.INSTANCE.categoryToCategoryDto(saved);
     }
 
-    @Override
-    public void delete(Category category) {
-        repository.delete(category);
+    @Transactional
+    public void deleteById(Long id) {
+        try {
+            categoryRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new EntityNotFoundException(MessageFormat.format("Category with id {0} not found", id));
+        }
     }
 }

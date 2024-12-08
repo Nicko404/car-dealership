@@ -1,5 +1,6 @@
 package ru.clevertec.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -10,6 +11,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.NamedAttributeNode;
+import jakarta.persistence.NamedEntityGraph;
+import jakarta.persistence.NamedSubgraph;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Builder;
@@ -30,6 +34,29 @@ import java.util.List;
 @SuperBuilder
 @Entity
 @Table(name = "clients")
+@NamedEntityGraph(
+        name = "client_entity_graph",
+        attributeNodes = {
+                @NamedAttributeNode("contacts"),
+                @NamedAttributeNode(value = "cars", subgraph = "cars_subgraph"),
+                @NamedAttributeNode(value = "reviews", subgraph = "reviews_subgraph")
+        },
+        subgraphs = {
+                @NamedSubgraph(
+                        name = "reviews_subgraph",
+                        attributeNodes = {
+                                @NamedAttributeNode("client"),
+                                @NamedAttributeNode("car")
+                        }
+                ),
+                @NamedSubgraph(
+                        name = "cars_subgraph",
+                        attributeNodes = {
+                                @NamedAttributeNode("reviews"),
+                        }
+                )
+        }
+)
 public class Client {
 
     @Id
@@ -53,7 +80,7 @@ public class Client {
     private List<Car> cars = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(mappedBy = "client")
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL)
     @Fetch(FetchMode.JOIN)
     private List<Review> reviews = new ArrayList<>();
 
