@@ -1,62 +1,20 @@
 package ru.clevertec.repository;
 
-import lombok.RequiredArgsConstructor;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import ru.clevertec.entity.Category;
-import ru.clevertec.utils.ObjectsUtils;
 
 import java.util.List;
+import java.util.Optional;
 
-@RequiredArgsConstructor
-public class CategoryRepository implements Repository<Category> {
-
-    private final SessionFactory sessionFactory;
-
-    @Override
-    public List<Category> findAll() {
-        Session session = sessionFactory.openSession();
-        List<Category> result = session.createQuery("from Category", Category.class).list();
-        session.close();
-        return result;
-    }
+@Repository
+public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     @Override
-    public Category findById(Long id) {
-        Session session = sessionFactory.openSession();
-        Category category = session.get(Category.class, id);
-        session.close();
-        return category;
-    }
+    List<Category> findAll();
 
     @Override
-    public Category save(Category category) {
-        Session session = sessionFactory.openSession();
-        session.beginTransaction();
-        session.persist(category);
-        session.getTransaction().commit();
-        session.close();
-        return category;
-    }
-
-    @Override
-    public Category update(Long id, Category category) {
-        Session session = sessionFactory.openSession();
-        session.beginTransaction();
-        Category saved = session.get(Category.class, id);
-        ObjectsUtils.copyNotNullProperties(category, saved);
-        session.persist(saved);
-        session.getTransaction().commit();
-        session.close();
-        return saved;
-    }
-
-    @Override
-    public void delete(Category category) {
-        Session session = sessionFactory.openSession();
-        session.beginTransaction();
-        session.remove(category);
-        session.getTransaction().commit();
-        session.close();
-    }
+    @EntityGraph("category_entity_graph")
+    Optional<Category> findById(Long aLong);
 }

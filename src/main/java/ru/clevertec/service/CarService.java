@@ -1,47 +1,85 @@
 package ru.clevertec.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.clevertec.dto.CarDto;
+import ru.clevertec.dto.upsert.UpsertCarDto;
 import ru.clevertec.entity.Car;
+import ru.clevertec.exception.EntityNotFoundException;
+import ru.clevertec.mapper.CarMapper;
+import ru.clevertec.repository.CarShowroomRepository;
 import ru.clevertec.repository.CarRepository;
-import ru.clevertec.repository.Repository;
+import ru.clevertec.repository.CategoryRepository;
+import ru.clevertec.utils.ObjectsUtils;
 
+import java.text.MessageFormat;
 import java.util.List;
 
+@Service
 @RequiredArgsConstructor
-public class CarService implements Service<Car>{
+public class CarService {
 
-    private final Repository<Car> repository;
+    private final CarRepository carRepository;
+    private final CarShowroomRepository showroomRepository;
+    private final CategoryRepository categoryRepository;
 
-    @Override
-    public List<Car> getAll() {
-        return repository.findAll();
+    @Transactional(readOnly = true)
+    public List<CarDto> getAll() {
+        return CarMapper.INSTANCE.carsToCarDtos(carRepository.findAll());
     }
 
-    public List<Car> getCarsByFilter(String brand, String category, int year, Integer minPrice, Integer maxPrice, boolean ascOrderByPrice) {
-        return ((CarRepository)repository).findByFilter(brand, category, year, minPrice, maxPrice, ascOrderByPrice);
+    public CarDto getCarById(Long id) {
+        Car car = carRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException(MessageFormat.format("Car with id {0} not found", id))
+        );
+        return CarMapper.INSTANCE.carToCarDto(car);
     }
 
-    public List<Car> getAll(int pageCount, int pageSize) {
-        return ((CarRepository)repository).findAll(pageCount, pageSize);
+    public CarDto create(UpsertCarDto carDto) {
+        Car car = CarMapper.INSTANCE.upsertCarDtoToCar(carDto);
+        car.setCarShowroom(showroomRepository.findById(carDto.getCarShowroomId()).orElseThrow(
+                        () -> new EntityNotFoundException(MessageFormat.format("Showroom with id {0} not found", carDto.getCarShowroomId()))
+                )
+        );
+        car.setCategory(categoryRepository.findById(carDto.getCategoryId()).orElseThrow(
+                        () -> new EntityNotFoundException(MessageFormat.format("Category with id {0} not found", carDto.getCategoryId()))
+                )
+        );
+
+        Car save = carRepository.save(car);
+        return CarMapper.INSTANCE.carToCarDto(save);
     }
 
-    @Override
-    public Car getById(Long id) {
-        return repository.findById(id);
+    @Transactional
+    public CarDto update(Long id, UpsertCarDto carDto) {
+        Car updated = CarMapper.INSTANCE.upsertCarDtoToCar(carDto);
+        updated.setReviews(null);
+        updated.setCarShowroom(showroomRepository.findById(carDto.getCarShowroomId()).orElseThrow(
+                        () -> new EntityNotFoundException(MessageFormat.format("Showroom with id {0} not found", carDto.getCarShowroomId()))
+                )
+        );
+        updated.setCategory(categoryRepository.findById(carDto.getCategoryId()).orElseThrow(
+                        () -> new EntityNotFoundException(MessageFormat.format("Category with id {0} not found", carDto.getCategoryId()))
+                )
+        );
+
+        Car saved = carRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException(MessageFormat.format("Car with id {0} not found", id))
+        );
+        ObjectsUtils.copyNotNullProperties(updated, saved);
+
+        carRepository.save(saved);
+
+        return CarMapper.INSTANCE.carToCarDto(saved);
     }
 
-    @Override
-    public Car save(Car car) {
-        return repository.save(car);
-    }
-
-    @Override
-    public Car update(Long id, Car car) {
-        return repository.update(id, car);
-    }
-
-    @Override
-    public void delete(Car car) {
-        repository.delete(car);
+    @Transactional
+    public void deleteById(Long id) {
+        try {
+            carRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new EntityNotFoundException(MessageFormat.format("Car with id {0} not found", id));
+        }
     }
 }

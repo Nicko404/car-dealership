@@ -17,7 +17,7 @@ public class ObjectsUtils {
         for (Field field : fields) {
             field.setAccessible(true);
             try {
-                field.set(target, field.get(source));
+                if (field.get(source) != null) field.set(target, field.get(source));
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
